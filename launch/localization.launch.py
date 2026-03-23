@@ -13,7 +13,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
     package_path = get_package_share_directory('fast_lio_localization')
     default_config_path = os.path.join(package_path, 'config')
-    default_rviz_config_path = os.path.join(package_path, 'rviz', 'fastlio_localiztion.rviz')
+    default_rviz_config_path = os.path.join(package_path, 'rviz', 'fastlio_localization.rviz')
 
     use_sim_time = LaunchConfiguration('use_sim_time')
     config_path = LaunchConfiguration('config_path')
@@ -41,7 +41,7 @@ def generate_launch_description():
         'rviz_cfg', default_value=default_rviz_config_path,
         description='RViz config file path'
     )
-
+    print(default_rviz_config_path)
     # fast_lio_node (예시로 fastlio_mapping 실행)
     fast_lio_node = Node(
         package='fast_lio_localization',

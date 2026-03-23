@@ -162,7 +162,7 @@ class GlobalLocalizationNode(Node):
         header = Header()
         header.stamp    = self.get_clock().now().to_msg()
         header.frame_id = 'map'
-        cloud = pc2.create_cloud_xyz32(header, subpts[::10].tolist())
+        cloud = pc2.create_cloud_xyz32(header, subpts.tolist())
         self.pub_submap.publish(cloud)
 
         return submap
