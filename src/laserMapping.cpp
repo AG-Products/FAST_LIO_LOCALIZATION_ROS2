@@ -74,6 +74,7 @@ double T1[MAXN], s_plot[MAXN], s_plot2[MAXN], s_plot3[MAXN], s_plot4[MAXN], s_pl
 double match_time = 0, solve_time = 0, solve_const_H_time = 0;
 int    kdtree_size_st = 0, kdtree_size_end = 0, add_point_size = 0, kdtree_delete_counter = 0;
 bool   runtime_pos_log = false, pcd_save_en = false, time_sync_en = false, extrinsic_est_en = true, path_en = true;
+std::string pcd_save_dir;
 /**************************/
 
 float res_last[100000] = {0.0};
@@ -85,7 +86,7 @@ mutex mtx_buffer;
 condition_variable sig_buffer;
 
 string root_dir = ROOT_DIR;
-string map_file_path, lid_topic, imu_topic;
+string map_file_name, lid_topic, imu_topic;
 
 double res_mean_last = 0.05, total_residual = 0.0;
 double last_timestamp_lidar = 0, last_timestamp_imu = -1.0;
@@ -606,10 +607,44 @@ void publish_map(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub
     // pubLaserCloudMap->publish(laserCloudMap);
 }
 
+void save_map()
+{
+    PointCloudXYZI::Ptr laserCloudFullRes(dense_pub_en ? feats_undistort : feats_down_body);
+    int size = laserCloudFullRes->points.size();
+    PointCloudXYZI::Ptr laserCloudWorld( \
+                    new PointCloudXYZI(size, 1));
+
+    for (int i = 0; i < size; i++)
+    {
+        RGBpointBodyToWorld(&laserCloudFullRes->points[i], \
+                            &laserCloudWorld->points[i]);
+    }
+    *pcl_wait_save += *laserCloudWorld;
+}
+
+
 void save_to_pcd()
 {
+    string all_points_dir;
+    if(pcd_save_dir[pcd_save_dir.size()-1] != '/'){
+        pcd_save_dir.append("/");
+    }
+
+    if(pcd_save_dir[0] == '.'){
+        string dir = pcd_save_dir.substr(1, pcd_save_dir.size() - 1);
+        if(dir[0] == '/'){
+            dir = dir.substr(1, dir.size() - 1);
+        }
+        all_points_dir = string(ROOT_DIR) + dir + map_file_name;
+    } else {
+        if(pcd_save_dir[0] != '/'){
+            pcd_save_dir = '/' + pcd_save_dir;
+        }
+        all_points_dir = pcd_save_dir + map_file_name;
+    }
     pcl::PCDWriter pcd_writer;
-    pcd_writer.writeBinary(map_file_path, *pcl_wait_pub);
+    cout << "current map saved to " << all_points_dir<<endl;
+    pcd_writer.writeBinary(all_points_dir, *pcl_wait_save);
 }
 
 template<typename T>
@@ -805,7 +840,7 @@ public:
         this->declare_parameter<bool>("publish.dense_publish_en", true);
         this->declare_parameter<bool>("publish.scan_bodyframe_pub_en", true);
         this->declare_parameter<int>("max_iteration", 4);
-        this->declare_parameter<string>("map_file_path", "");
+
         this->declare_parameter<string>("common.lid_topic", "/livox/lidar");
         this->declare_parameter<string>("common.imu_topic", "/livox/imu");
         this->declare_parameter<bool>("common.time_sync_en", false);
@@ -831,8 +866,10 @@ public:
         this->declare_parameter<bool>("mapping.extrinsic_est_en", true);
         this->declare_parameter<bool>("pcd_save.pcd_save_en", false);
         this->declare_parameter<int>("pcd_save.interval", -1);
+        this->declare_parameter<string>("pcd_save.map_file_name", "test.pcd");
         this->declare_parameter<vector<double>>("mapping.extrinsic_T", vector<double>());
         this->declare_parameter<vector<double>>("mapping.extrinsic_R", vector<double>());
+        this->declare_parameter<string>("pcd_save.pcd_save_dir","./PCD");
 
         this->get_parameter_or<bool>("publish.path_en", path_en, true);
         this->get_parameter_or<bool>("publish.effect_map_en", effect_pub_en, false);
@@ -841,7 +878,6 @@ public:
         this->get_parameter_or<bool>("publish.dense_publish_en", dense_pub_en, true);
         this->get_parameter_or<bool>("publish.scan_bodyframe_pub_en", scan_body_pub_en, true);
         this->get_parameter_or<int>("max_iteration", NUM_MAX_ITERATIONS, 4);
-        this->get_parameter_or<string>("map_file_path", map_file_path, "");
         this->get_parameter_or<string>("common.lid_topic", lid_topic, "/livox/lidar");
         this->get_parameter_or<string>("common.imu_topic", imu_topic,"/livox/imu");
         this->get_parameter_or<bool>("common.time_sync_en", time_sync_en, false);
@@ -869,6 +905,8 @@ public:
         this->get_parameter_or<int>("pcd_save.interval", pcd_save_interval, -1);
         this->get_parameter_or<vector<double>>("mapping.extrinsic_T", extrinT, vector<double>());
         this->get_parameter_or<vector<double>>("mapping.extrinsic_R", extrinR, vector<double>());
+        this->get_parameter_or<string>("pcd_save.pcd_save_dir",pcd_save_dir,"./maps");
+        this->get_parameter_or<string>("pcd_save.map_file_name", map_file_name, "test.pcd");
 
         RCLCPP_INFO(this->get_logger(), "p_pre->lidar_type %d", p_pre->lidar_type);
 
@@ -939,8 +977,9 @@ public:
         auto period_ms = std::chrono::milliseconds(static_cast<int64_t>(1000.0 / 100.0));
         timer_ = rclcpp::create_timer(this, this->get_clock(), period_ms, std::bind(&LaserMappingNode::timer_callback, this));
 
-        auto map_period_ms = std::chrono::milliseconds(static_cast<int64_t>(1000.0));
-        map_pub_timer_ = rclcpp::create_timer(this, this->get_clock(), map_period_ms, std::bind(&LaserMappingNode::map_publish_callback, this));
+        auto vis_map_period_ms = std::chrono::milliseconds(static_cast<int64_t>(1000.0)); // slowly build map using only once lidar frame per second so that Rviz can see it
+        vis_map_pub_timer_ = rclcpp::create_timer(this, this->get_clock(), vis_map_period_ms, std::bind(&LaserMappingNode::vis_map_publish_callback, this));
+
 
         map_save_srv_ = this->create_service<std_srvs::srv::Trigger>("map_save", std::bind(&LaserMappingNode::map_save_callback, this, std::placeholders::_1, std::placeholders::_2));
 
@@ -1074,6 +1113,7 @@ private:
             if (scan_pub_en && scan_body_pub_en) publish_frame_body(pubLaserCloudFull_body_);
             if (effect_pub_en) publish_effect_world(pubLaserCloudEffect_);
             // if (map_pub_en) publish_map(pubLaserCloudMap_);
+            save_map();
 
             /*** Debug variables ***/
             if (runtime_pos_log)
@@ -1107,14 +1147,14 @@ private:
         }
     }
 
-    void map_publish_callback()
+    void vis_map_publish_callback()
     {
         if (map_pub_en) publish_map(pubLaserCloudMap_);
     }
 
     void map_save_callback(std_srvs::srv::Trigger::Request::ConstSharedPtr req, std_srvs::srv::Trigger::Response::SharedPtr res)
     {
-        RCLCPP_INFO(this->get_logger(), "Saving map to %s...", map_file_path.c_str());
+        RCLCPP_INFO(this->get_logger(), "[CALLBACK] Saving map");
         if (pcd_save_en)
         {
             save_to_pcd();
@@ -1124,7 +1164,7 @@ private:
         else
         {
             res->success = false;
-            res->message = "Map save disabled.";
+            res->message = "Map save failed.";
         }
     }
 
@@ -1141,7 +1181,7 @@ private:
 
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
     rclcpp::TimerBase::SharedPtr timer_;
-    rclcpp::TimerBase::SharedPtr map_pub_timer_;
+    rclcpp::TimerBase::SharedPtr vis_map_pub_timer_;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr map_save_srv_;
 
     bool effect_pub_en = false, map_pub_en = false;
@@ -1149,7 +1189,6 @@ private:
     double deltaT, deltaR, aver_time_consu = 0, aver_time_icp = 0, aver_time_match = 0, aver_time_incre = 0, aver_time_solve = 0, aver_time_const_H_time = 0;
     bool flg_EKF_converged, EKF_stop_flg = 0;
     double epsi[23] = {0.001};
-
     FILE *fp;
     ofstream fout_pre, fout_out, fout_dbg;
 };
@@ -1169,10 +1208,27 @@ int main(int argc, char** argv)
     /* 2. pcd save will largely influence the real-time performences **/
     if (pcl_wait_save->size() > 0 && pcd_save_en)
     {
-        string file_name = string("scans.pcd");
-        string all_points_dir(string(string(ROOT_DIR) + "PCD/") + file_name);
+        std::cout << "Saving pcd file before shutdown... " << std::endl;
+        string file_name = string("test.pcd");
+        string all_points_dir;
+        if(pcd_save_dir[pcd_save_dir.size()-1] != '/'){
+            pcd_save_dir.append("/");
+        }
+
+        if(pcd_save_dir[0] == '.'){
+            string dir = pcd_save_dir.substr(1, pcd_save_dir.size() - 1);
+            if(dir[0] == '/'){
+                dir = dir.substr(1, dir.size() - 1);
+            }
+            all_points_dir = string(ROOT_DIR) + dir + map_file_name;
+        } else {
+            if(pcd_save_dir[0] != '/'){
+                pcd_save_dir = '/' + pcd_save_dir;
+            }
+            all_points_dir = pcd_save_dir + map_file_name;
+        }
         pcl::PCDWriter pcd_writer;
-        cout << "current scan saved to /PCD/" << file_name<<endl;
+        cout << "current map saved to " << all_points_dir<<endl;
         pcd_writer.writeBinary(all_points_dir, *pcl_wait_save);
     }
 
