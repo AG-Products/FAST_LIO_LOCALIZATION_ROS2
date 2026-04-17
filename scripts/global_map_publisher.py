@@ -21,7 +21,11 @@ class MapPublisherNode(Node):
         if path:
             try:
                 self.global_map = o3d.io.read_point_cloud(path)
-                self.get_logger().info(f'Loaded map from: {path}')
+                map_size = len(self.global_map.points)
+                self.get_logger().info(f'Loaded map from: {path} with {map_size} points')
+                vs = 0.1
+                self.global_map = self.global_map.voxel_down_sample(vs)
+                print(f'Voxel down sampling using size {vs} New size is {len(self.global_map.points)}')
             except Exception as e:
                 self.get_logger().error(f'Failed to load PCD: {e}')
         else:

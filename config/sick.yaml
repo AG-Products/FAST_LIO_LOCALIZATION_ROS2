@@ -7,6 +7,10 @@
         filter_size_map: 0.5
         cube_side_length: 1000.0
         runtime_pos_log_enable: false
+        lidar_frame: "lidar_link"
+        odom_frame: "lidar_init"
+        base_link_frame: "base_link"
+        publish_tf: true
 
         common:
             lid_topic:  "/lidar_points_filtered"
@@ -42,8 +46,9 @@
             scan_bodyframe_pub_en: true  # true: output the point cloud scans in IMU-body-frame
 
         pcd_save:
-            pcd_save_en: true
+            pcd_save_en: true  #must be on for any saving to occur
+            pcd_save_shutdown: false    # Choose whether to automatically save map on node shutdown BEWARE OVERWRITING. Can still use service call /map_save if disabled
             interval: -1                 # how many LiDAR frames saved in each pcd file; 
                                         # -1 : all frames will be saved in ONE pcd file, may lead to memory crash when having too much frames.
             pcd_save_dir: ./maps
-            map_file_name: "test.pcd"
+            map_file_name: "latest.pcd"
