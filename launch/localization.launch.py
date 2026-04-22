@@ -12,6 +12,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     package_path = get_package_share_directory('fast_lio_localization')
+    mapping_package_path = get_package_share_directory('arc_mapping')
     default_config_path = os.path.join(package_path, 'config')
     default_rviz_config_path = os.path.join(package_path, 'rviz', 'fastlio_localization.rviz')
 
@@ -20,6 +21,8 @@ def generate_launch_description():
     config_file = LaunchConfiguration('config_file')
     rviz_use = LaunchConfiguration('rviz')
     rviz_cfg = LaunchConfiguration('rviz_cfg')
+    pcd_save_dir = os.path.join(mapping_package_path,'maps')
+    map_file = os.path.join(mapping_package_path,'maps','latest_oriented.pcd')
 
     declare_use_sim_time_cmd = DeclareLaunchArgument(
         'use_sim_time', default_value='false',
@@ -48,7 +51,8 @@ def generate_launch_description():
         executable='fastlio_mapping',
         name='fast_lio_mapping',
         parameters=[PathJoinSubstitution([config_path, config_file]),
-                    {'use_sim_time': use_sim_time}],
+                    {'use_sim_time': use_sim_time,
+                     'pcd_save.pcd_save_dir': pcd_save_dir}],
         output='screen'
     )
 
@@ -78,7 +82,8 @@ def generate_launch_description():
         executable='global_map_publisher.py',
         name='global_map_publisher',
         parameters=[PathJoinSubstitution([config_path, config_file]),
-                    {'use_sim_time': use_sim_time}],
+                    {'use_sim_time': use_sim_time,
+                     'map_file_path': map_file}],
         output='screen'
     )    
 

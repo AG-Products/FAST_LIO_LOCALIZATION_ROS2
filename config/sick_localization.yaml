@@ -13,7 +13,7 @@
 
 /global_map_publisher:
     ros__parameters:
-        map_file_path: "/home/chris/nav2_ws/src/FAST_LIO_LOCALIZATION_ROS2/maps/latest_oriented.pcd"
+        map_file_path: "./maps/latest.pcd" #This must be set using the launch file to work properly
         interval: 5 # publish interval in seconds
 
 
@@ -69,6 +69,6 @@
             pcd_save_en: false #ENSURE this is turned off in localisation mode, otherwise the map will be overwritten
             interval: -1                 # how many LiDAR frames saved in each pcd file; 
                                         # -1 : all frames will be saved in ONE pcd file, may lead to memory crash when having too much frames.
-            pcd_save_dir: ./maps
-            map_file_name: "test.pcd"
+            pcd_save_dir: ./maps #must be set using the launch file to work properly
+            map_file_name: "latest.pcd"
 

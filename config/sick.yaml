@@ -50,5 +50,5 @@
             pcd_save_shutdown: false    # Choose whether to automatically save map on node shutdown BEWARE OVERWRITING. Can still use service call /map_save if disabled
             interval: -1                 # how many LiDAR frames saved in each pcd file; 
                                         # -1 : all frames will be saved in ONE pcd file, may lead to memory crash when having too much frames.
-            pcd_save_dir: ./maps
+            pcd_save_dir: ./maps #must be set using the launch file to work properly
             map_file_name: "latest.pcd"
