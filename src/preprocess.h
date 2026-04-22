@@ -10,6 +10,43 @@ using namespace std;
 
 typedef pcl::PointXYZINormal PointType;
 typedef pcl::PointCloud<PointType> PointCloudXYZI;
+typedef pcl::PointCloud<pcl::PointXYZ> PointCloudXYZ;
+
+template <class T>
+bool float_eq(const T a, const T b, const T eps = 10e-6)
+{
+  return std::fabs(a - b) < eps;
+}
+struct PointXYZIRCAEDT
+{
+  float x{0.0F};
+  float y{0.0F};
+  float z{0.0F};
+  std::uint8_t intensity{0U};
+  std::uint8_t return_type{0U};
+  std::uint16_t channel{0U};
+  float azimuth{0.0F};
+  float elevation{0.0F};
+  float distance{0.0F};
+  std::uint32_t time_stamp{0U};
+
+  friend bool operator==(const PointXYZIRCAEDT & p1, const PointXYZIRCAEDT & p2) noexcept
+  {
+    return float_eq<float>(p1.x, p2.x) && float_eq<float>(p1.y, p2.y) &&
+           float_eq<float>(p1.z, p2.z) && p1.intensity == p2.intensity &&
+           p1.return_type == p2.return_type && p1.channel == p2.channel &&
+           float_eq<float>(p1.azimuth, p2.azimuth) && float_eq<float>(p1.distance, p2.distance) &&
+           p1.time_stamp == p2.time_stamp;
+  }
+};
+POINT_CLOUD_REGISTER_POINT_STRUCT(
+  PointXYZIRCAEDT,
+  (float, x, x)(float, y, y)(float, z, z)(std::uint8_t, intensity, intensity)(
+    std::uint8_t, return_type,
+    return_type)(std::uint16_t, channel, channel)(float, azimuth, azimuth)(
+    float, elevation, elevation)(float, distance, distance)(std::uint32_t, time_stamp, time_stamp))
+
+typedef pcl::PointCloud<PointXYZIRCAEDT> PointCloudXYZIRCAEDT;
 
 enum LID_TYPE
 {
@@ -130,10 +167,10 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(sick_ros::Point,
     (float, x, x)
     (float, y, y)
     (float, z, z)
-    (float, intensity, i)
+    (uint8_t, intensity, intensity)
     // use std::uint32_t to avoid conflicting with pcl::uint32_t
-    (std::uint32_t, t, t)
-    (std::int8_t, ring, ring)
+    (std::uint32_t, t, time_stamp)
+    (std::uint16_t, ring, channel)
 )
 
 namespace livox_ros

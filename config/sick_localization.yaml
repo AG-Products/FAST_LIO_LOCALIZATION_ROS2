@@ -2,7 +2,7 @@
     ros__parameters:
         map_voxel_size: 0.5
         scan_voxel_size: 0.5
-        freq_localization: 10.0          # [Hz]
+        freq_localization: 5.0          # [Hz]
         localization_th: 0.9
         fov: 6.283185307179586        # 2*pi, radian; 전체 시야
         fov_far: 200.0
@@ -13,7 +13,7 @@
 
 /global_map_publisher:
     ros__parameters:
-        map_file_path: "/home/chris/nav2_ws/src/FAST_LIO_LOCALIZATION_ROS2/maps/latest.pcd"
+        map_file_path: "/home/chris/nav2_ws/src/FAST_LIO_LOCALIZATION_ROS2/maps/latest_oriented.pcd"
         interval: 5 # publish interval in seconds
 
 
@@ -27,9 +27,10 @@
         filter_size_map: 0.5
         cube_side_length: 1000.0
         runtime_pos_log_enable: false
-        lidar_frame: "lidar_link"
-        odom_frame: "lidar_init"
+        lidar_frame: "base_link"
+        odom_frame: "odom"
         base_link_frame: "base_link"
+        publish_tf: false
 
         common:
             lid_topic:  "/lidar_points_filtered"

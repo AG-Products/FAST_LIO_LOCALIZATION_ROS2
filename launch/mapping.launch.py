@@ -56,12 +56,12 @@ def generate_launch_description():
         arguments=['-d', rviz_cfg],
         condition=IfCondition(rviz_use)
     )
-    static_node = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        arguments='0.525 -0.474 1.462 0.0 0.0 0.0 odom lidar_init'.split(' '),
-        output='screen'
-    )
+    # static_node = Node(
+    #     package='tf2_ros',
+    #     executable='static_transform_publisher',
+    #     arguments='0.525 -0.474 1.462 0.0 0.0 0.0 odom lidar_init'.split(' '),
+    #     output='screen'
+    # )
     ld = LaunchDescription()
     ld.add_action(declare_use_sim_time_cmd)
     ld.add_action(declare_config_path_cmd)
@@ -69,7 +69,7 @@ def generate_launch_description():
     ld.add_action(declare_rviz_cmd)
     ld.add_action(declare_rviz_config_path_cmd)
 
-    ld.add_action(static_node)
+    #ld.add_action(static_node)
     ld.add_action(fast_lio_node)
     ld.add_action(rviz_node)
 

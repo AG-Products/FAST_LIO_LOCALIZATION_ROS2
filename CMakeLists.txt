@@ -61,7 +61,7 @@ find_package(pcl_ros REQUIRED)
 find_package(pcl_conversions REQUIRED)
 #find_package(livox_ros_driver2 REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
-
+find_package(tf2_sensor_msgs REQUIRED)
 set(dependencies
   rclcpp
   rclcpp_components
@@ -73,6 +73,7 @@ set(dependencies
   visualization_msgs
   pcl_ros
   pcl_conversions
+  tf2_sensor_msgs
   #livox_ros_driver2
 )
 

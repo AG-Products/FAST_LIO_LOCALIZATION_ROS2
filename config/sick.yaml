@@ -1,14 +1,14 @@
 /**:
     ros__parameters:
-        feature_extract_enable: false
-        point_filter_num: 1
+        feature_extract_enable: false #leave this false or break autoware stuff
+        point_filter_num: 1 #leave this at one or break autoware stuff
         max_iteration: 3
         filter_size_surf: 0.5
         filter_size_map: 0.5
         cube_side_length: 1000.0
         runtime_pos_log_enable: false
-        lidar_frame: "lidar_link"
-        odom_frame: "lidar_init"
+        lidar_frame: "base_link"
+        odom_frame: "odom"
         base_link_frame: "base_link"
         publish_tf: true
 
@@ -23,7 +23,7 @@
             lidar_type: 5                # 1 for Livox serials LiDAR, 2 for Velodyne LiDAR, 3 for ouster LiDAR, 
             scan_line: 16
             timestamp_unit: 3                 # 0-second, 1-milisecond, 2-microsecond, 3-nanosecond.
-            blind: 0.0
+            blind: 0.0 #leave this at zero or break autoware stuff
 
         mapping:
             acc_cov: 0.1

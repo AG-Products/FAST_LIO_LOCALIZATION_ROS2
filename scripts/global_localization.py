@@ -103,7 +103,7 @@ class GlobalLocalizationNode(Node):
         self.cur_odom = msg
 
     def cb_save_cur_scan(self, msg: PointCloud2):
-        msg.header.frame_id = 'camera_init'
+        msg.header.frame_id = 'odom'
         msg.header.stamp    = self.get_clock().now().to_msg()
         self.pub_pc_in_map.publish(msg)
 
@@ -116,14 +116,14 @@ class GlobalLocalizationNode(Node):
         self.global_localization(self.T_map_to_odom)
 
     def global_localization(self, pose_est):
-        self.get_logger().info('Performing global localization via ICP...')
+        #self.get_logger().info('Performing global localization via ICP...')
         scan_copy = copy.deepcopy(self.cur_scan)
 
         submap = self.crop_global_map_in_FOV(scan_copy, pose_est, self.cur_odom)
 
         T, _       = self.registration_at_scale(scan_copy, submap, initial=pose_est, scale=5)
         T, fitness = self.registration_at_scale(scan_copy, submap, initial=T,         scale=1)
-        self.get_logger().info(f'ICP fitness: {fitness:.3f}')
+        #self.get_logger().info(f'ICP fitness: {fitness:.3f}')
 
         if fitness > self.localization_th:
             self.T_map_to_odom = T
@@ -138,7 +138,7 @@ class GlobalLocalizationNode(Node):
             self.pub_map_to_odom.publish(odom)
             return True
 
-        self.get_logger().warn('Global localization failed (fitness below threshold).')
+        self.get_logger().warn(f'Global localization failed (fitness below threshold),{fitness:.3f}/0.9')
         return False
 
     def crop_global_map_in_FOV(self, scan, pose_est, odom):
