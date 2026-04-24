@@ -14,13 +14,16 @@ def generate_launch_description():
     package_path = get_package_share_directory('fast_lio_localization')
     default_config_path = os.path.join(package_path, 'config')
     default_rviz_config_path = os.path.join(package_path, 'rviz', 'fastlio.rviz')
-    mapping_package_path = get_package_share_directory('arc_mapping')
     use_sim_time = LaunchConfiguration('use_sim_time')
     config_path = LaunchConfiguration('config_path')
     config_file = LaunchConfiguration('config_file')
     rviz_use = LaunchConfiguration('rviz')
     rviz_cfg = LaunchConfiguration('rviz_cfg')
-    pcd_save_dir = os.path.join(mapping_package_path,'maps')
+    map_directory = LaunchConfiguration('map_directory')
+    declare_map_directory_cmd = DeclareLaunchArgument(
+        'map_directory', default_value='$HOME/maps',
+        description='Where to store and access maps'
+    )
 
     declare_use_sim_time_cmd = DeclareLaunchArgument(
         'use_sim_time', default_value='false',
@@ -49,7 +52,7 @@ def generate_launch_description():
         name='fast_lio_mapping',
         parameters=[PathJoinSubstitution([config_path, config_file]),
                     {'use_sim_time': use_sim_time,
-                     'pcd_save.pcd_save_dir': pcd_save_dir}],
+                     'pcd_save.pcd_save_dir': map_directory}],
         output='screen'
     )
     rviz_node = Node(
@@ -70,6 +73,7 @@ def generate_launch_description():
     ld.add_action(decalre_config_file_cmd)
     ld.add_action(declare_rviz_cmd)
     ld.add_action(declare_rviz_config_path_cmd)
+    ld.add_action(declare_map_directory_cmd)
 
     #ld.add_action(static_node)
     ld.add_action(fast_lio_node)
