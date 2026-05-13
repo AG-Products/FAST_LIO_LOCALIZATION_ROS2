@@ -234,7 +234,7 @@ void Preprocess::sick_handler(const sensor_msgs::msg::PointCloud2::UniquePtr &ms
       if (yaw_angle <= -180.0)
         yaw_angle += 360.0;
 
-      added_pt.curvature = pl_orig.points[i].t * time_unit_scale;
+      added_pt.curvature = (float)pl_orig.points[i].t * time_unit_scale;
       if (pl_orig.points[i].ring < N_SCANS)
       {
         pl_buff[pl_orig.points[i].ring].push_back(added_pt);
