@@ -221,17 +221,19 @@ void Preprocess::sick_handler(const sensor_msgs::msg::PointCloud2::UniquePtr &ms
         continue;
       Eigen::Vector3d pt_vec;
       PointType added_pt;
-      added_pt.x = pl_orig.points[i].x;
-      added_pt.y = pl_orig.points[i].y;
-      added_pt.z = pl_orig.points[i].z;
-      added_pt.intensity = pl_orig.points[i].intensity;
-      double yaw_angle = atan2(added_pt.y, added_pt.x) * 57.3;
-      if (yaw_angle >= 180.0)
-        yaw_angle -= 360.0;
-      if (yaw_angle <= -180.0)
-        yaw_angle += 360.0;
+      // added_pt.x = pl_orig.points[i].x;
+      // added_pt.y = pl_orig.points[i].y;
+      // added_pt.z = pl_orig.points[i].z;
+      // added_pt.intensity = pl_orig.points[i].intensity;
+      // double yaw_angle = atan2(added_pt.y, added_pt.x) * 57.3;
+      // if (yaw_angle >= 180.0)
+      //   yaw_angle -= 360.0;
+      // if (yaw_angle <= -180.0)
+      //   yaw_angle += 360.0;
 
-      added_pt.curvature = (float)pl_orig.points[i].t * time_unit_scale;
+      // added_pt.curvature = (float)pl_orig.points[i].t * time_unit_scale;
+      added_pt = pl_orig.points[i];
+      added_pt.curvature = pl_orig.points[i].curvature * time_unit_scale;
       if (pl_orig.points[i].ring < N_SCANS)
       {
         pl_buff[pl_orig.points[i].ring].push_back(added_pt);
@@ -276,11 +278,19 @@ void Preprocess::sick_handler(const sensor_msgs::msg::PointCloud2::UniquePtr &ms
 
       Eigen::Vector3d pt_vec;
       PointType added_pt;
-      added_pt.x = pl_orig.points[i].x;
-      added_pt.y = pl_orig.points[i].y;
-      added_pt.z = pl_orig.points[i].z;
-      added_pt.intensity = pl_orig.points[i].intensity;
-      added_pt.curvature = pl_orig.points[i].t * time_unit_scale;  // curvature unit: ms
+      // added_pt.x = pl_orig.points[i].x;
+      // added_pt.y = pl_orig.points[i].y;
+      // added_pt.z = pl_orig.points[i].z;
+      // added_pt.intensity = pl_orig.points[i].intensity;
+      // double yaw_angle = atan2(added_pt.y, added_pt.x) * 57.3;
+      // if (yaw_angle >= 180.0)
+      //   yaw_angle -= 360.0;
+      // if (yaw_angle <= -180.0)
+      //   yaw_angle += 360.0;
+
+      // added_pt.curvature = (float)pl_orig.points[i].t * time_unit_scale;
+      added_pt = pl_orig.points[i];
+      added_pt.curvature = pl_orig.points[i].curvature * time_unit_scale;
 
       pl_surf.points.push_back(added_pt);
     }
