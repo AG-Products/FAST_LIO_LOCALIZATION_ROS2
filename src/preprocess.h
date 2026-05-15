@@ -2,15 +2,16 @@
 #include <rclcpp/rclcpp.hpp>
 #include <pcl_conversions/pcl_conversions.h>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <point_type.h>
 //#include <livox_ros_driver2/msg/custom_msg.hpp>
 
 using namespace std;
 
 #define IS_VALID(a) ((abs(a) > 1e8) ? true : false)
 
-typedef pcl::PointXYZINormal PointType;
+// typedef pcl::PointXYZINormal PointType;
 typedef pcl::PointCloud<PointType> PointCloudXYZI;
-typedef pcl::PointCloud<pcl::PointXYZ> PointCloudXYZ;
+typedef pcl::PointCloud<PointType> PointCloudXYZ;
 
 enum LID_TYPE
 {
@@ -114,28 +115,6 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(ouster_ros::Point,
     (std::uint32_t, range, range)
 )
 
-namespace sick_ros
-{
-struct EIGEN_ALIGN16 Point
-{
-  PCL_ADD_POINT4D;
-  float intensity;
-  uint32_t t;
-  int8_t ring;
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-};
-}  // namespace ouster_ros
-
-// clang-format off
-POINT_CLOUD_REGISTER_POINT_STRUCT(sick_ros::Point,
-    (float, x, x)
-    (float, y, y)
-    (float, z, z)
-    (uint8_t, intensity, intensity)
-    // use std::uint32_t to avoid conflicting with pcl::uint32_t
-    (std::uint32_t, t, time_stamp)
-    (std::uint16_t, ring, channel)
-)
 
 namespace livox_ros
 {

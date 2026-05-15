@@ -69,6 +69,7 @@
 #include <tf2/LinearMath/Transform.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
+#include <point_type.h>
 
 #define INIT_TIME           (0.1)
 #define LASER_POINT_COV     (0.001)
@@ -222,7 +223,7 @@ void RGBpointBodyToWorld(PointType const * const pi, PointType * const po)
     po->intensity = pi->intensity;
 }
 
-void RGBpointBodyToWorldBuffer(pcl::PointXYZ const * const pi, pcl::PointXYZ * const po)
+void RGBpointBodyToWorldBuffer(PointType const * const pi, PointType * const po)
 {
     state_ikfom state = state_buffer.front().second;
     V3D p_body(pi->x, pi->y, pi->z);
@@ -896,7 +897,7 @@ void groundless_pcl_cbk(const sensor_msgs::msg::PointCloud2::UniquePtr msg)
     pcl::fromROSMsg(*msg, *laserCloudFullRes);
     PointCloudXYZ::Ptr cropped_cloud(new PointCloudXYZ);
 
-    pcl::CropBox<pcl::PointXYZ> crop;
+    pcl::CropBox<PointSick> crop;
     crop.setInputCloud(laserCloudFullRes);
     crop.setMin(Eigen::Vector4f({-1000.0f,-1000.0f,2.0f,0.0f}));
     crop.setMax(Eigen::Vector4f({1000.0f,1000.0f,1000.0f,0.0f}));;

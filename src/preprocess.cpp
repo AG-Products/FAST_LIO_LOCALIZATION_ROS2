@@ -200,7 +200,7 @@ void Preprocess::sick_handler(const sensor_msgs::msg::PointCloud2::UniquePtr &ms
   pl_surf.clear();
   pl_corn.clear();
   pl_full.clear();
-  pcl::PointCloud<sick_ros::Point> pl_orig;
+  pcl::PointCloud<PointType> pl_orig;
   pcl::fromROSMsg(*msg, pl_orig);
   int plsize = pl_orig.size();
   pl_corn.reserve(plsize);
@@ -225,9 +225,6 @@ void Preprocess::sick_handler(const sensor_msgs::msg::PointCloud2::UniquePtr &ms
       added_pt.y = pl_orig.points[i].y;
       added_pt.z = pl_orig.points[i].z;
       added_pt.intensity = pl_orig.points[i].intensity;
-      added_pt.normal_x = 0;
-      added_pt.normal_y = 0;
-      added_pt.normal_z = 0;
       double yaw_angle = atan2(added_pt.y, added_pt.x) * 57.3;
       if (yaw_angle >= 180.0)
         yaw_angle -= 360.0;
@@ -283,9 +280,6 @@ void Preprocess::sick_handler(const sensor_msgs::msg::PointCloud2::UniquePtr &ms
       added_pt.y = pl_orig.points[i].y;
       added_pt.z = pl_orig.points[i].z;
       added_pt.intensity = pl_orig.points[i].intensity;
-      added_pt.normal_x = 0;
-      added_pt.normal_y = 0;
-      added_pt.normal_z = 0;
       added_pt.curvature = pl_orig.points[i].t * time_unit_scale;  // curvature unit: ms
 
       pl_surf.points.push_back(added_pt);
@@ -324,9 +318,6 @@ void Preprocess::oust64_handler(const sensor_msgs::msg::PointCloud2::UniquePtr &
       added_pt.y = pl_orig.points[i].y;
       added_pt.z = pl_orig.points[i].z;
       added_pt.intensity = pl_orig.points[i].intensity;
-      added_pt.normal_x = 0;
-      added_pt.normal_y = 0;
-      added_pt.normal_z = 0;
       double yaw_angle = atan2(added_pt.y, added_pt.x) * 57.3;
       if (yaw_angle >= 180.0)
         yaw_angle -= 360.0;
@@ -382,9 +373,6 @@ void Preprocess::oust64_handler(const sensor_msgs::msg::PointCloud2::UniquePtr &
       added_pt.y = pl_orig.points[i].y;
       added_pt.z = pl_orig.points[i].z;
       added_pt.intensity = pl_orig.points[i].intensity;
-      added_pt.normal_x = 0;
-      added_pt.normal_y = 0;
-      added_pt.normal_z = 0;
       added_pt.curvature = pl_orig.points[i].t * time_unit_scale;  // curvature unit: ms
 
       pl_surf.points.push_back(added_pt);
@@ -446,9 +434,6 @@ void Preprocess::velodyne_handler(const sensor_msgs::msg::PointCloud2::UniquePtr
     for (int i = 0; i < plsize; i++)
     {
       PointType added_pt;
-      added_pt.normal_x = 0;
-      added_pt.normal_y = 0;
-      added_pt.normal_z = 0;
       int layer = pl_orig.points[i].ring;
       if (layer >= N_SCANS)
         continue;
@@ -520,9 +505,6 @@ void Preprocess::velodyne_handler(const sensor_msgs::msg::PointCloud2::UniquePtr
       PointType added_pt;
       // cout<<"!!!!!!"<<i<<" "<<plsize<<endl;
 
-      added_pt.normal_x = 0;
-      added_pt.normal_y = 0;
-      added_pt.normal_z = 0;
       added_pt.x = pl_orig.points[i].x;
       added_pt.y = pl_orig.points[i].y;
       added_pt.z = pl_orig.points[i].z;
@@ -673,9 +655,6 @@ void Preprocess::default_handler(const sensor_msgs::msg::PointCloud2::UniquePtr 
   for(uint i = 0; i < plsize; ++i)
   {
     PointType added_pt;
-    added_pt.normal_x = 0;
-    added_pt.normal_y = 0;
-    added_pt.normal_z = 0;
     added_pt.x = pl_orig.points[i].x;
     added_pt.y = pl_orig.points[i].y;
     added_pt.z = pl_orig.points[i].z;
