@@ -223,8 +223,8 @@ void ImuProcess::UndistortPcl(const MeasureGroup &meas, esekfom::esekf<state_ikf
   /*** sort point clouds by offset time ***/
   pcl_out = *(meas.lidar);
   sort(pcl_out.points.begin(), pcl_out.points.end(), time_list);
-  // cout<<"[ IMU Process ]: Process lidar from "<<pcl_beg_time<<" to "<<pcl_end_time<<", " \
-  //          <<meas.imu.size()<<" imu msgs from "<<imu_beg_time<<" to "<<imu_end_time<<endl;
+  // cout<<"[ IMU Process ]: Process lidar from "<<pcl_beg_time - 1779100000<<" to "<<pcl_end_time - 1779100000<<", " \
+  //           <<meas.imu.size()<<" imu msgs from "<<imu_beg_time - 1779100000<<" to "<<imu_end_time  -1779100000<<endl;
 
   /*** Initialize IMU pose ***/
   state_ikfom imu_state = kf_state.get_x();

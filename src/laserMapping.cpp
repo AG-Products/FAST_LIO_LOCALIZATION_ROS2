@@ -223,11 +223,11 @@ void RGBpointBodyToWorld(PointType const * const pi, PointType * const po)
     po->intensity = pi->intensity;
 }
 
-void RGBpointBodyToWorldBuffer(PointType const * const pi, PointType * const po)
+void RGBpointBodyToWorld(pcl::PointXYZ const * const pi, pcl::PointXYZ * const po)
 {
-    state_ikfom state = state_buffer.front().second;
     V3D p_body(pi->x, pi->y, pi->z);
-    V3D p_global(state.rot * (state.offset_R_L_I*p_body + state.offset_T_L_I) + state.pos);
+    V3D p_global(state_point.rot * (state_point.offset_R_L_I*p_body + state_point.offset_T_L_I) + state_point.pos);
+
     po->x = p_global(0);
     po->y = p_global(1);
     po->z = p_global(2);
@@ -513,7 +513,7 @@ void map_incremental()
 
 PointCloudXYZI::Ptr pcl_wait_pub(new PointCloudXYZI());
 PointCloudXYZI::Ptr pcl_wait_save(new PointCloudXYZI());
-PointCloudXYZ::Ptr autoware_wait_save(new PointCloudXYZ());
+ pcl::PointCloud<pcl::PointXYZ>::Ptr autoware_wait_save(new  pcl::PointCloud<pcl::PointXYZ>);
 
 void publish_frame_world(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pubLaserCloudFull)
 {
@@ -582,10 +582,11 @@ void publish_frame_body(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::Shared
         RGBpointBodyLidarToIMU(&feats_undistort->points[i], \
                             &laserCloudIMUBody->points[i]);
     }
-
+    pcl::PointCloud<AWPointXYZIRCAEDT>::Ptr awCloud;
+    awCloud = pcl_to_aw(laserCloudIMUBody);
     sensor_msgs::msg::PointCloud2 laserCloudmsg;
-    pcl::toROSMsg(*laserCloudIMUBody, laserCloudmsg);
-    laserCloudmsg.header.stamp = get_ros_time(lidar_end_time);
+    pcl::toROSMsg(*awCloud, laserCloudmsg);
+    laserCloudmsg.header.stamp = get_ros_time(lidar_beg_time);
     laserCloudmsg.header.frame_id = lidar_frame_;
     pubLaserCloudFull_body->publish(laserCloudmsg);
     publish_count -= PUBFRAME_PERIOD;
@@ -893,22 +894,22 @@ void groundless_pcl_cbk(const sensor_msgs::msg::PointCloud2::UniquePtr msg)
         }
         
     }
-    PointCloudXYZ::Ptr laserCloudFullRes(new PointCloudXYZ);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr laserCloudFullRes(new  pcl::PointCloud<pcl::PointXYZ>);
     pcl::fromROSMsg(*msg, *laserCloudFullRes);
-    PointCloudXYZ::Ptr cropped_cloud(new PointCloudXYZ);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cropped_cloud(new  pcl::PointCloud<pcl::PointXYZ>);
 
-    pcl::CropBox<PointSick> crop;
+    pcl::CropBox<pcl::PointXYZ> crop;
     crop.setInputCloud(laserCloudFullRes);
     crop.setMin(Eigen::Vector4f({-1000.0f,-1000.0f,2.0f,0.0f}));
     crop.setMax(Eigen::Vector4f({1000.0f,1000.0f,1000.0f,0.0f}));;
     crop.setNegative(true); // keep OUTSIDE box
     crop.filter(*cropped_cloud);
     int size = cropped_cloud->points.size();
-    PointCloudXYZ::Ptr laserCloudWorld(new PointCloudXYZ(size, 1));
+     pcl::PointCloud<pcl::PointXYZ>::Ptr laserCloudWorld(new  pcl::PointCloud<pcl::PointXYZ>(size, 1));
 
     for (int i = 0; i < size; i++)
     {   
-        RGBpointBodyToWorldBuffer(&cropped_cloud->points[i], \
+        RGBpointBodyToWorld(&cropped_cloud->points[i], \
                             &laserCloudWorld->points[i]);
     }
     state_buffer.pop_front();
@@ -1135,11 +1136,13 @@ private:
             lasermap_fov_segment();
 
             /*** downsample the feature points in a scan ***/
-            downSizeFilterSurf.setInputCloud(feats_undistort);
-            downSizeFilterSurf.filter(*feats_down_body);
+            // downSizeFilterSurf.setInputCloud(feats_undistort);
+            // downSizeFilterSurf.filter(*feats_down_body);
+            *feats_down_body = *feats_undistort;
             t1 = omp_get_wtime();
             feats_down_size = feats_down_body->points.size();
             /*** initialize the map kdtree ***/
+            std::cout << "Filter cloud is " << 100 * double(feats_down_size) / double(feats_undistort->size()) << "% of original cloud" << std::endl;
             if(ikdtree.Root_Node == nullptr)
             {
                 RCLCPP_INFO(this->get_logger(), "Initialize the map kdtree");

@@ -1,10 +1,10 @@
 /**:
     ros__parameters:
-        feature_extract_enable: true #leave this false or break autoware stuff
+        feature_extract_enable: false #leave this false or break autoware stuff
         point_filter_num: 1 #leave this at one or break autoware stuff
-        max_iteration: 3
-        filter_size_surf: 0.5
-        filter_size_map: 0.5
+        max_iteration: 10 
+        filter_size_surf: 0.03
+        filter_size_map: 0.5 # Not Used
         cube_side_length: 1000.0
         runtime_pos_log_enable: false
         lidar_frame: "base_link"
@@ -15,15 +15,15 @@
         common:
             lid_topic:  "/lidar_points_filtered"
             imu_topic:  "/imu/fusion_ready"
-            time_sync_en: false         # ONLY turn on when external time synchronization is really not possible
-            time_offset_lidar_to_imu: -0.01845307 # Time offset between lidar and IMU calibrated by other algorithms, e.g. LI-Init (can be found in README).
+            time_sync_en: true       # ONLY turn on when external time synchronization is really not possible
+            time_offset_lidar_to_imu: 0.0 # Time offset between lidar and IMU calibrated by other algorithms, e.g. LI-Init (can be found in README).
                                         # This param will take effect no matter what time_sync_en is. So if the time offset is not known exactly, please set as 0.0
             
         preprocess:
             lidar_type: 5                # 1 for Livox serials LiDAR, 2 for Velodyne LiDAR, 3 for ouster LiDAR, 
             scan_line: 16
             timestamp_unit: 0                 # 0-second, 1-milisecond, 2-microsecond, 3-nanosecond.
-            blind: 0.0 #leave this at zero or break autoware stuff
+            blind: 2.0 #leave this at zero or break autoware stuff
 
         mapping:
             acc_cov: 0.1
@@ -32,11 +32,17 @@
             b_gyr_cov: 0.0001
             fov_degree:    360.0
             det_range:     150.0
-            extrinsic_est_en:  false      # true: enable the online estimation of IMU-LiDAR extrinsic
+            extrinsic_est_en:  true      # true: enable the online estimation of IMU-LiDAR extrinsic
+           # extrinsic_T: [ 0.003991, -0.001580, 0.104104 ] # Actual lidar to IMU (this is what was given by lidarimuinit, even though fast lio says it wants imu to lidar (imu base frame))
+   #         extrinsic_T: [ -0.003991, 0.001580, -0.104104 ] # what I think it should be (i.e. lidar in IMU frame, lidar is below iMU)
+         #   extrinsic_T: [ -0.528991, 0.47558, -1.566104 ]
             extrinsic_T: [ 0.003991, -0.001580, 0.104104 ]
-            extrinsic_R: [  0.9999539,  0.0034945, -0.0089444,
-                            -0.0034050,  0.9999442,  0.0100031,
-                            0.0089789, -0.0099722,  0.9999099 ]
+            extrinsic_R: [  1.,  0., 0.,
+                            0.,  1.,  0.,
+                            0., 0.,  1. ]
+            # extrinsic_R: [0.0000000, -1.0000000,  0.0000000,
+            #             -1.0000000, -0.0000000, -0.0000000,
+            #             0.0000000,  0.0000000, -1.0000000 ]
 
         publish:
             map_en: true
