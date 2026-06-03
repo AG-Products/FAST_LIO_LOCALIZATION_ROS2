@@ -418,20 +418,32 @@ bool sync_packages(MeasureGroup &meas)
         meas.lidar = lidar_buffer.front();
         meas.lidar_beg_time = time_buffer.front();
         lidar_beg_time = time_buffer.front();
+        // NOTE: Some LiDARs (e.g. SICK) do not guarantee points are time-ordered in the cloud.
+        // FAST-LIO uses PointType.curvature as the per-point time offset (ms). For robust scan timing,
+        // compute the maximum offset in the scan instead of relying on points.back().
+        double scan_max_offset_ms = 0.0;
+        if (meas.lidar && !meas.lidar->points.empty())
+        {
+            for (const auto &pt : meas.lidar->points)
+            {
+                if (pt.curvature > scan_max_offset_ms) scan_max_offset_ms = pt.curvature;
+            }
+        }
+
         if (meas.lidar->points.size() <= 1) // time too little
         {
             lidar_end_time = meas.lidar_beg_time + lidar_mean_scantime;
             std::cerr << "Too few input point cloud!\n";
         }
-        else if (meas.lidar->points.back().curvature / double(1000) < 0.5 * lidar_mean_scantime)
+        else if (scan_max_offset_ms / double(1000) < 0.5 * lidar_mean_scantime)
         {
             lidar_end_time = meas.lidar_beg_time + lidar_mean_scantime;
         }
         else
         {
             scan_num ++;
-            lidar_end_time = meas.lidar_beg_time + meas.lidar->points.back().curvature / double(1000);
-            lidar_mean_scantime += (meas.lidar->points.back().curvature / double(1000) - lidar_mean_scantime) / scan_num;
+            lidar_end_time = meas.lidar_beg_time + scan_max_offset_ms / double(1000);
+            lidar_mean_scantime += (scan_max_offset_ms / double(1000) - lidar_mean_scantime) / scan_num;
         }
 
         meas.lidar_end_time = lidar_end_time;
