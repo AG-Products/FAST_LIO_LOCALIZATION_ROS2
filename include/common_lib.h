@@ -8,7 +8,7 @@
 #include <fast_lio_localization/msg/pose6_d.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-
+#include "point_type.h"
 using namespace std;
 using namespace Eigen;
 
@@ -32,7 +32,7 @@ using namespace Eigen;
 #define DEBUG_FILE_DIR(name)     (string(string(ROOT_DIR) + "Log/"+ name))
 
 typedef fast_lio_localization::msg::Pose6D Pose6D;
-typedef pcl::PointXYZINormal PointType;
+// typedef pcl::PointXYZINormal PointType;
 typedef pcl::PointCloud<PointType> PointCloudXYZI;
 typedef vector<PointType, Eigen::aligned_allocator<PointType>>  PointVector;
 typedef Vector3d V3D;
