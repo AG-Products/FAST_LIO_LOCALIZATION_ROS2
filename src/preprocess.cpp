@@ -205,25 +205,25 @@ void Preprocess::sick_handler(const sensor_msgs::msg::PointCloud2::UniquePtr& ms
   pcl::fromROSMsg(*msg, pl_orig);
 
 
-  std::ofstream log_file;
-  log_file.open("/home/beraru/sources/sick_points_debug.txt", std::ios::app);  // append mode
+  // std::ofstream log_file;
+  // log_file.open("/home/beraru/sources/sick_points_debug.txt", std::ios::app);  // append mode
 
-  if (!log_file.is_open()) {
-    RCLCPP_ERROR(rclcpp::get_logger("preprocess"),
-                 "Failed to open /home/beraru/sources/sick_points_debug.txt");
-    return;
-  }
+  // if (!log_file.is_open()) {
+  //   RCLCPP_ERROR(rclcpp::get_logger("preprocess"),
+  //                "Failed to open /home/beraru/sources/sick_points_debug.txt");
+  //   return;
+  // }
 
-  log_file << "===== New PointCloud =====\n";
-  log_file << "Number of points: " << pl_orig.points.size() << "\n";
+  // log_file << "===== New PointCloud =====\n";
+  // log_file << "Number of points: " << pl_orig.points.size() << "\n";
 
-  for (size_t i = 0; i < pl_orig.points.size(); ++i) {
-    log_file << "point[" << i << "] "
-             << "t: " << pl_orig.points[i].t << ", curvature: " << pl_orig.points[i].curvature
-             << "\n";
-  }
+  // for (size_t i = 0; i < pl_orig.points.size(); ++i) {
+  //   log_file << "point[" << i << "] "
+  //            << "t: " << pl_orig.points[i].t << ", curvature: " << pl_orig.points[i].curvature
+  //            << "\n";
+  // }
 
-  log_file.close();
+  // log_file.close();
   int plsize = pl_orig.size();
   pl_corn.reserve(plsize);
   pl_surf.reserve(plsize);

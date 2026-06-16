@@ -587,15 +587,15 @@ void publish_frame_world(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::Share
 void publish_frame_body(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pubLaserCloudFull_body)
 {
     int size = feats_undistort->points.size();
-    PointCloudXYZI::Ptr laserCloudIMUBody(new PointCloudXYZI(size, 1));
+    // PointCloudXYZI::Ptr laserCloudIMUBody(new PointCloudXYZI(size, 1));
 
-    for (int i = 0; i < size; i++)
-    {
-        RGBpointBodyLidarToIMU(&feats_undistort->points[i], \
-                            &laserCloudIMUBody->points[i]);
-    }
+    // for (int i = 0; i < size; i++)
+    // {
+    //     RGBpointBodyLidarToIMU(&feats_undistort->points[i], \
+    //                         &laserCloudIMUBody->points[i]);
+    // }
     pcl::PointCloud<AWPointXYZIRCAEDT>::Ptr awCloud;
-    awCloud = pcl_to_aw(laserCloudIMUBody);
+    awCloud = pcl_to_aw(feats_undistort);
     sensor_msgs::msg::PointCloud2 laserCloudmsg;
     pcl::toROSMsg(*awCloud, laserCloudmsg);
     laserCloudmsg.header.stamp = get_ros_time(lidar_beg_time);
@@ -912,7 +912,7 @@ void groundless_pcl_cbk(const sensor_msgs::msg::PointCloud2::UniquePtr msg)
 
     pcl::CropBox<pcl::PointXYZ> crop;
     crop.setInputCloud(laserCloudFullRes);
-    crop.setMin(Eigen::Vector4f({-1000.0f,-1000.0f,2.0f,0.0f}));
+    crop.setMin(Eigen::Vector4f({-1000.0f,-1000.0f,1.5f,0.0f}));
     crop.setMax(Eigen::Vector4f({1000.0f,1000.0f,1000.0f,0.0f}));;
     crop.setNegative(true); // keep OUTSIDE box
     crop.filter(*cropped_cloud);
