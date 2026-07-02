@@ -233,6 +233,16 @@ void RGBpointBodyToWorld(pcl::PointXYZ const * const pi, pcl::PointXYZ * const p
     po->z = p_global(2);
 }
 
+void RGBpointBodyToWorld(pcl::PointXYZ const * const pi, pcl::PointXYZ * const po, state_ikfom local_state_point)
+{
+    V3D p_body(pi->x, pi->y, pi->z);
+    V3D p_global(local_state_point.rot * (local_state_point.offset_R_L_I*p_body + local_state_point.offset_T_L_I) + local_state_point.pos);
+
+    po->x = p_global(0);
+    po->y = p_global(1);
+    po->z = p_global(2);
+}
+
 void RGBpointBodyLidarToIMU(PointType const * const pi, PointType * const po)
 {
     V3D p_body_lidar(pi->x, pi->y, pi->z);
@@ -584,23 +594,44 @@ void publish_frame_world(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::Share
     */
 }
 
-void publish_frame_body(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pubLaserCloudFull_body)
+void publish_frame_body(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pubLaserCloudFull_body, tf2_ros::Buffer &tf_buffer)
 {
     int size = feats_undistort->points.size();
-    // PointCloudXYZI::Ptr laserCloudIMUBody(new PointCloudXYZI(size, 1));
+    PointCloudXYZI::Ptr laserCloudIMUBody(new PointCloudXYZI(size, 1));
 
-    // for (int i = 0; i < size; i++)
-    // {
-    //     RGBpointBodyLidarToIMU(&feats_undistort->points[i], \
-    //                         &laserCloudIMUBody->points[i]);
-    // }
+    for (int i = 0; i < size; i++)
+    {
+        RGBpointBodyLidarToIMU(&feats_undistort->points[i], \
+                            &laserCloudIMUBody->points[i]);
+    }
     pcl::PointCloud<AWPointXYZIRCAEDT>::Ptr awCloud;
-    awCloud = pcl_to_aw(feats_undistort);
+    awCloud = pcl_to_aw(laserCloudIMUBody);
     sensor_msgs::msg::PointCloud2 laserCloudmsg;
     pcl::toROSMsg(*awCloud, laserCloudmsg);
     laserCloudmsg.header.stamp = get_ros_time(lidar_beg_time);
     laserCloudmsg.header.frame_id = lidar_frame_;
-    pubLaserCloudFull_body->publish(laserCloudmsg);
+    sensor_msgs::msg::PointCloud2 cloudBaseLink;
+    try
+    {
+        geometry_msgs::msg::TransformStamped transform =
+            tf_buffer.lookupTransform(
+                base_link_frame_,
+                laserCloudmsg.header.frame_id,
+                laserCloudmsg.header.stamp,
+                rclcpp::Duration::from_seconds(0.1));
+
+        tf2::doTransform(laserCloudmsg, cloudBaseLink, transform);
+    }
+    catch (const tf2::TransformException &ex)
+    {
+        RCLCPP_ERROR(
+            rclcpp::get_logger("pointcloud_transform"),
+            "Transform failed: %s",
+            ex.what());
+            return;
+    }
+
+    pubLaserCloudFull_body->publish(cloudBaseLink);
     publish_count -= PUBFRAME_PERIOD;
 }
 
@@ -652,22 +683,21 @@ void publish_map(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub
 void save_map()
 {
     static int count_since_last_save = 20;
-    if(count_since_last_save == 20){
-        PointCloudXYZI::Ptr laserCloudFullRes(dense_pub_en ? feats_undistort : feats_down_body);
-        int size = laserCloudFullRes->points.size();
+   // if(count_since_last_save == 20){
+        int size = feats_undistort->points.size();
         PointCloudXYZI::Ptr laserCloudWorld( \
                         new PointCloudXYZI(size, 1));
 
         for (int i = 0; i < size; i++)
         {
-            RGBpointBodyToWorld(&laserCloudFullRes->points[i], \
+            RGBpointBodyToWorld(&feats_undistort->points[i], \
                                 &laserCloudWorld->points[i]);
         }
         *pcl_wait_save += *laserCloudWorld;
         count_since_last_save = 0;
-    } else {
-        count_since_last_save++;
-    }
+    // } else {
+    //     count_since_last_save++;
+    // }
 }
 
 
@@ -879,56 +909,7 @@ void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_
     }
     solve_time += omp_get_wtime() - solve_start_;
 }
-void groundless_pcl_cbk(const sensor_msgs::msg::PointCloud2::UniquePtr msg) 
-{
-   // std::cout << "Groundless PCL callback" << std::endl;
-    if(!pcd_save_en)
-        return;
 
-    double time_stamp_msg = get_time_sec(msg->header.stamp);
-    double time_stamp_buf = state_buffer.front().first;
-    for(int i = 0; i < state_buffer.size(); i++){
-        if(time_stamp_msg != time_stamp_buf){
-            std::cout << "ERROR, Latest buffer time = " << time_stamp_buf - first_lidar_time << ", msg time = " << time_stamp_msg - first_lidar_time << ", i = " << i << "/" << state_buffer.size() << std::endl;
-            if(time_stamp_msg > time_stamp_buf){
-                state_buffer.pop_front();
-            } else {
-                std::cout << "error, state buffer ahead of messages. THis should not happen" << std::endl;
-            }
-            if(state_buffer.size() == 0){
-                std::cout << "state buffer empty :(" << std::endl;
-                return; 
-            }
-            time_stamp_buf = state_buffer.front().first;
-        } else {
-            //std::cout << "timestamps matched! Huzzah the hit!!" << std::endl;
-            break;
-        }
-        
-    }
-    pcl::PointCloud<pcl::PointXYZ>::Ptr laserCloudFullRes(new  pcl::PointCloud<pcl::PointXYZ>);
-    pcl::fromROSMsg(*msg, *laserCloudFullRes);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cropped_cloud(new  pcl::PointCloud<pcl::PointXYZ>);
-
-    pcl::CropBox<pcl::PointXYZ> crop;
-    crop.setInputCloud(laserCloudFullRes);
-    crop.setMin(Eigen::Vector4f({-1000.0f,-1000.0f,1.5f,0.0f}));
-    crop.setMax(Eigen::Vector4f({1000.0f,1000.0f,1000.0f,0.0f}));;
-    crop.setNegative(true); // keep OUTSIDE box
-    crop.filter(*cropped_cloud);
-    int size = cropped_cloud->points.size();
-     pcl::PointCloud<pcl::PointXYZ>::Ptr laserCloudWorld(new  pcl::PointCloud<pcl::PointXYZ>(size, 1));
-
-    for (int i = 0; i < size; i++)
-    {   
-        RGBpointBodyToWorld(&cropped_cloud->points[i], \
-                            &laserCloudWorld->points[i]);
-    }
-    state_buffer.pop_front();
-   // std::cout << "addint point to cloud" << std::endl;
-    *autoware_wait_save += *laserCloudWorld;
-
-}
 class LaserMappingNode : public rclcpp::Node
 {
 public:
@@ -1025,6 +1006,9 @@ public:
         path.header.stamp = this->get_clock()->now();
         path.header.frame_id =odom_frame_;
 
+        tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+        tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
         // /*** variables definition ***/
         // int effect_feat_num = 0, frame_num = 0;
         // double deltaT, deltaR, aver_time_consu = 0, aver_time_icp = 0, aver_time_match = 0, aver_time_incre = 0, aver_time_solve = 0, aver_time_const_H_time = 0;
@@ -1076,7 +1060,7 @@ public:
         // {
             sub_pcl_pc_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(lid_topic, rclcpp::SensorDataQoS(), standard_pcl_cbk);
         if(pcd_save_en)
-            sub_pcl_groundless_ = this->create_subscription<sensor_msgs::msg::PointCloud2>("/no_ground/pointcloud", rclcpp::SensorDataQoS(), groundless_pcl_cbk);
+            sub_pcl_groundless_ = this->create_subscription<sensor_msgs::msg::PointCloud2>("/no_ground/pointcloud", rclcpp::SensorDataQoS(),  std::bind(&LaserMappingNode::groundless_pcl_cbk, this, std::placeholders::_1));
         // }
         sub_imu_ = this->create_subscription<sensor_msgs::msg::Imu>(imu_topic, 10, imu_cbk);
         pubLaserCloudFull_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/cloud_registered", 20);
@@ -1110,7 +1094,79 @@ public:
     }
 
 private:
+    void groundless_pcl_cbk(const sensor_msgs::msg::PointCloud2::UniquePtr msg) 
+    {
+    // std::cout << "Groundless PCL callback" << std::endl;
+        if(!pcd_save_en)
+            return;
 
+        double time_stamp_msg = get_time_sec(msg->header.stamp);
+        double time_stamp_buf = state_buffer.front().first;
+        for(int i = 0; i < state_buffer.size(); i++){
+            if(time_stamp_msg != time_stamp_buf){
+                std::cout << "ERROR, Latest buffer time = " << time_stamp_buf - first_lidar_time << ", msg time = " << time_stamp_msg - first_lidar_time << ", i = " << i << "/" << state_buffer.size() << std::endl;
+                if(time_stamp_msg > time_stamp_buf){
+                    state_buffer.pop_front();
+                } else {
+                    std::cout << "error, state buffer ahead of messages. THis should not happen" << std::endl;
+                }
+                if(state_buffer.size() == 0){
+                    std::cout << "state buffer empty :(" << std::endl;
+                    return; 
+                }
+                time_stamp_buf = state_buffer.front().first;
+            } else {
+                //std::cout << "timestamps matched! Huzzah the hit!!" << std::endl;
+                break;
+            }
+            
+        }
+        sensor_msgs::msg::PointCloud2 msgLidarLink;
+        try
+        {
+            geometry_msgs::msg::TransformStamped transform =
+                tf_buffer_->lookupTransform(
+                    lidar_frame_,
+                    msg->header.frame_id,
+                    msg->header.stamp,
+                    rclcpp::Duration::from_seconds(0.1));
+
+            tf2::doTransform(*msg, msgLidarLink, transform);
+        }
+
+        catch (const tf2::TransformException &ex)
+        {
+            RCLCPP_ERROR(
+                rclcpp::get_logger("pointcloud_transform"),
+                "Transform failed: %s",
+                ex.what());
+                return;
+        }
+        pcl::PointCloud<pcl::PointXYZ>::Ptr laserCloudFullRes(new  pcl::PointCloud<pcl::PointXYZ>);
+        pcl::fromROSMsg(msgLidarLink, *laserCloudFullRes);
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cropped_cloud(new  pcl::PointCloud<pcl::PointXYZ>);
+
+        pcl::CropBox<pcl::PointXYZ> crop;
+        crop.setInputCloud(laserCloudFullRes);
+        crop.setMin(Eigen::Vector4f({-1000.0f,-1000.0f,-1000.0f,0.0f}));
+        crop.setMax(Eigen::Vector4f({1000.0f,1000.0f,1000.0f,0.0f}));;
+        crop.setNegative(false); // keep OUTSIDE box
+        crop.filter(*cropped_cloud);
+        int size = cropped_cloud->points.size();
+        pcl::PointCloud<pcl::PointXYZ>::Ptr laserCloudWorld(new  pcl::PointCloud<pcl::PointXYZ>(size, 1));
+
+        for (int i = 0; i < size; i++)
+        {   
+            RGBpointBodyToWorld(&cropped_cloud->points[i], \
+                                &laserCloudWorld->points[i], state_buffer.front().second);
+        }
+        state_buffer.pop_front();
+    // std::cout << "addint point to cloud" << std::endl;
+        *autoware_wait_save += *laserCloudWorld;
+
+    }
+    std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+    std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
     void timer_callback()
     {
         if(sync_packages(Measures))
@@ -1148,13 +1204,13 @@ private:
             lasermap_fov_segment();
 
             /*** downsample the feature points in a scan ***/
-            // downSizeFilterSurf.setInputCloud(feats_undistort);
-            // downSizeFilterSurf.filter(*feats_down_body);
-            *feats_down_body = *feats_undistort;
+            downSizeFilterSurf.setInputCloud(feats_undistort);
+            downSizeFilterSurf.filter(*feats_down_body);
+
             t1 = omp_get_wtime();
             feats_down_size = feats_down_body->points.size();
             /*** initialize the map kdtree ***/
-            std::cout << "Filter cloud is " << 100 * double(feats_down_size) / double(feats_undistort->size()) << "% of original cloud" << std::endl;
+            //std::cout << "Filter cloud is " << 100 * double(feats_down_size) / double(feats_undistort->size()) << "% of original cloud" << std::endl;
             if(ikdtree.Root_Node == nullptr)
             {
                 RCLCPP_INFO(this->get_logger(), "Initialize the map kdtree");
@@ -1201,7 +1257,7 @@ private:
             Nearest_Points.resize(feats_down_size);
             int  rematch_num = 0;
             bool nearest_search_en = true; //
-
+  
             t2 = omp_get_wtime();
             
             /*** iterated state estimation ***/
@@ -1224,7 +1280,7 @@ private:
             
             
             publish_odometry(pubOdomAftMapped_, tf_broadcaster_);
-            if (scan_pub_en && scan_body_pub_en && pcd_save_en) publish_frame_body(pubLaserCloudFull_body_);
+            if (scan_pub_en && scan_body_pub_en && pcd_save_en) publish_frame_body(pubLaserCloudFull_body_,*tf_buffer_);
     
             /*** add the feature points to map kdtree ***/
             t3 = omp_get_wtime();
